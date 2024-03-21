@@ -208,8 +208,9 @@ class Program
                         break;
                     case 2:
                         user.DisplayGoals();
-                        Console.Write("Enter the index of
-int index = int.Parse(Console.ReadLine()) - 1;
+                        Console.Write("Enter the index of the goal to record completion: ");
+                        // goal to record completion
+                        int index = int.Parse(Console.ReadLine()) - 1;
                         user.RecordCompletion(index);
                         break;
                     case 3:
@@ -233,6 +234,7 @@ int index = int.Parse(Console.ReadLine()) - 1;
         }
     }
 
+    // Method to save user data
     static void SaveUser(User user)
     {
         try
@@ -249,6 +251,7 @@ int index = int.Parse(Console.ReadLine()) - 1;
         }
     }
 
+    // Method to load user data
     static User LoadUser()
     {
         User user = null;
