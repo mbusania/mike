@@ -1,280 +1,153 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Runtime.Serialization;
-using System.Runtime.Serialization.Formatters.Binary;
+using System.Linq;
 
-// Base class for all types of goals
-[Serializable]
-abstract class Goal
+public abstract class Goal
 {
-    protected string name;
-    protected int value;
+    private string _name;
+    private int _points;
 
-    // Constructor
-    public Goal(string name, int value)
+    public Goal(string name)
     {
-        this.name = name;
-        this.value = value;
+        _name = name;
+        _points = 0;
     }
 
-    // Method to mark goal completion
-    public abstract void Complete();
+    public string Name { get { return _name; } }
+    public int Points { get { return _points; } }
 
-    // Method to get the status of the goal
-    public abstract string GetStatus();
-}
+    public abstract void RecordProgress();
 
-// Simple goal class
-[Serializable]
-class SimpleGoal : Goal
-{
-    // Constructor
-    public SimpleGoal(string name, int value) : base(name, value)
+    public virtual void DisplayGoal()
     {
+        Console.WriteLine($"Goal: {_name} | Points: {_points}");
     }
 
-    // Method overriding for completing the simple goal
-    public override void Complete()
+    public virtual string SerializeGoal()
     {
-        Console.WriteLine($"Completed simple goal: {name}. Gained {value} points.");
-        // Add value to user's score
+        return $"{_name},{_points}";
     }
 
-    // Method overriding for getting the status of the simple goal
-    public override string GetStatus()
+    public virtual void DeserializeGoal(string data)
     {
-        return "[ ] " + name;
+        string[] parts = data.Split(',');
+        _name = parts[0];
+        _points = int.Parse(parts[1]);
     }
 }
 
-// Eternal goal class
-[Serializable]
-class EternalGoal : Goal
+public class SimpleGoal : Goal
 {
-    // Constructor
-    public EternalGoal(string name, int value) : base(name, value)
+    public SimpleGoal(string name) : base(name)
     {
     }
 
-    // Method overriding for completing the eternal goal
-    public override void Complete()
+    public override void RecordProgress()
     {
-        Console.WriteLine($"Recorded progress for eternal goal: {name}. Gained {value} points.");
-        // Add value to user's score
-    }
-
-    // Method overriding for getting the status of the eternal goal
-    public override string GetStatus()
-    {
-        return "[X] " + name;
+        base._points += 1000;
     }
 }
 
-// Checklist goal class
-[Serializable]
-class ChecklistGoal : Goal
+public class EternalGoal : Goal
 {
-    private int totalTimes;
-    private int completedTimes;
-
-    // Constructor
-    public ChecklistGoal(string name, int value, int totalTimes) : base(name, value)
+    public EternalGoal(string name) : base(name)
     {
-        this.totalTimes = totalTimes;
-        this.completedTimes = 0;
     }
 
-    // Method overriding for completing the checklist goal
-    public override void Complete()
+    public override void RecordProgress()
     {
-        completedTimes++;
-        Console.WriteLine($"Completed {name} ({completedTimes}/{totalTimes}). Gained {value} points.");
-        // Add value to user's score
-        if (completedTimes == totalTimes)
-        {
-            Console.WriteLine($"Bonus! Checklist goal {name} completed {totalTimes} times. Gained extra {value * totalTimes} points.");
-            // Add extra bonus value to user's score
-        }
-    }
-
-    // Method overriding for getting the status of the checklist goal
-    public override string GetStatus()
-    {
-        return $"Completed {completedTimes}/{totalTimes} times: {name}";
+        base._points += 100;
     }
 }
 
-// User class to manage goals and score
-[Serializable]
-class User
+public class ChecklistGoal : Goal
 {
-    public List<Goal> goals;
-    public int score;
+    private int _targetCount;
+    private int _completedCount;
 
-    // Constructor
-    public User()
+    public ChecklistGoal(string name, int targetCount) : base(name)
     {
-        goals = new List<Goal>();
-        score = 0;
+        _targetCount = targetCount;
+        _completedCount = 0;
     }
 
-    // Method to add a new goal
-    public void AddGoal(Goal goal)
+    public override void RecordProgress()
     {
-        goals.Add(goal);
-    }
+        base._points += 50;
+        _completedCount++;
 
-    // Method to record completion of a goal
-    public void RecordCompletion(int goalIndex)
-    {
-        if (goalIndex >= 0 && goalIndex < goals.Count)
+        if (_completedCount == _targetCount)
         {
-            goals[goalIndex].Complete();
-        }
-        else
-        {
-            Console.WriteLine("Invalid goal index.");
+            base._points += 500;
         }
     }
 
-    // Method to display the list of goals
-    public void DisplayGoals()
+    public override void DisplayGoal()
     {
-        Console.WriteLine("Current Goals:");
-        for (int i = 0; i < goals.Count; i++)
-        {
-            Console.WriteLine($"{i + 1}. {goals[i].GetStatus()}");
-        }
-    }
-
-    // Method to display the user's score
-    public void DisplayScore()
-    {
-        Console.WriteLine($"Current Score: {score}");
+        Console.WriteLine($"Goal: {_name} | Points: {_points} | Completed: {_completedCount}/{_targetCount} times");
     }
 }
 
 class Program
 {
+    static List<Goal> goals = new List<Goal>();
+
     static void Main(string[] args)
     {
-        User user = LoadUser();
+        LoadGoals(); // Load previously saved goals
 
-        while (true)
+        SimpleGoal marathonGoal = new SimpleGoal("Run a marathon");
+        marathonGoal.RecordProgress();
+        marathonGoal.DisplayGoal();
+        goals.Add(marathonGoal);
+
+        EternalGoal scripturesGoal = new EternalGoal("Read scriptures daily");
+        scripturesGoal.RecordProgress();
+        scripturesGoal.DisplayGoal();
+        goals.Add(scripturesGoal);
+
+        ChecklistGoal templeGoal = new ChecklistGoal("Attend temple", 10);
+        templeGoal.RecordProgress();
+        templeGoal.RecordProgress();
+        templeGoal.DisplayGoal();
+        goals.Add(templeGoal);
+
+        SaveGoals(); // Save goals after recording progress
+    }
+
+    static void SaveGoals()
+    {
+        using (StreamWriter outputFile = new StreamWriter("goals.txt"))
         {
-            Console.WriteLine("Eternal Quest Program");
-            Console.WriteLine("1. Add Goal");
-            Console.WriteLine("2. Record Completion");
-            Console.WriteLine("3. Display Goals");
-            Console.WriteLine("4. Display Score");
-            Console.WriteLine("5. Exit");
-            Console.Write("Select an option: ");
-            int option;
-            if (int.TryParse(Console.ReadLine(), out option))
+            foreach (Goal goal in goals)
             {
-                switch (option)
-                {
-                    case 1:
-                        Console.Write("Enter goal name: ");
-                        string name = Console.ReadLine();
-                        Console.Write("Enter goal type (1 for simple, 2 for eternal, 3 for checklist): ");
-                        int type = int.Parse(Console.ReadLine());
-                        Console.Write("Enter goal value: ");
-                        int value = int.Parse(Console.ReadLine());
-                        Goal goal = null;
-                        switch (type)
-                        {
-                            case 1:
-                                goal = new SimpleGoal(name, value);
-                                break;
-                            case 2:
-                                goal = new EternalGoal(name, value);
-                                break;
-                            case 3:
-                                Console.Write("Enter total times for checklist goal: ");
-                                int totalTimes = int.Parse(Console.ReadLine());
-                                goal = new ChecklistGoal(name, value, totalTimes);
-                                break;
-                            default:
-                                Console.WriteLine("Invalid goal type.");
-                                break;
-                        }
-                        if (goal != null)
-                        {
-                            user.AddGoal(goal);
-                            Console.WriteLine("Goal added successfully.");
-                        }
-                        break;
-                    case 2:
-                        user.DisplayGoals();
-                        Console.Write("Enter the index of the goal to record completion: ");
-                        // goal to record completion
-                        int index = int.Parse(Console.ReadLine()) - 1;
-                        user.RecordCompletion(index);
-                        break;
-                    case 3:
-                        user.DisplayGoals();
-                        break;
-                    case 4:
-                        user.DisplayScore();
-                        break;
-                    case 5:
-                        SaveUser(user);
-                        return;
-                    default:
-                        Console.WriteLine("Invalid option. Please try again.");
-                        break;
-                }
-            }
-            else
-            {
-                Console.WriteLine("Invalid option. Please try again.");
+                outputFile.WriteLine(goal.SerializeGoal());
             }
         }
     }
 
-    // Method to save user data
-    static void SaveUser(User user)
+    static void LoadGoals()
     {
-        try
+        if (File.Exists("goals.txt"))
         {
-            FileStream fileStream = new FileStream("user.dat", FileMode.Create);
-            BinaryFormatter formatter = new BinaryFormatter();
-            formatter.Serialize(fileStream, user);
-            fileStream.Close();
-            Console.WriteLine("User data saved successfully.");
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error saving user data: {ex.Message}");
-        }
-    }
+            goals.Clear();
+            string[] lines = File.ReadAllLines("goals.txt");
+            foreach (string line in lines)
+            {
+                string[] parts = line.Split(',');
+                string name = parts[0];
+                int points = int.Parse(parts[1]);
 
-    // Method to load user data
-    static User LoadUser()
-    {
-        User user = null;
-        try
-        {
-            if (File.Exists("user.dat"))
-            {
-                FileStream fileStream = new FileStream("user.dat", FileMode.Open);
-                BinaryFormatter formatter = new BinaryFormatter();
-                user = (User)formatter.Deserialize(fileStream);
-                fileStream.Close();
-                Console.WriteLine("User data loaded successfully.");
-            }
-            else
-            {
-                user = new User();
-                Console.WriteLine("New user created.");
+                if (name == "Run a marathon")
+                    goals.Add(new SimpleGoal(name));
+                else if (name == "Read scriptures daily")
+                    goals.Add(new EternalGoal(name));
+                else if (name == "Attend temple")
+                    goals.Add(new ChecklistGoal(name, 10));
+
+                goals.Last().DeserializeGoal(line);
             }
         }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error loading user data: {ex.Message}");
-        }
-        return user ?? new User();
     }
 }
