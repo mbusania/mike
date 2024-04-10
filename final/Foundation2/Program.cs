@@ -1,87 +1,98 @@
 using System;
 using System.Collections.Generic;
 
-class Product
+class Activity
 {
-    public string Name { get; set; }
-    public string ProductId { get; set; }
-    public double Price { get; set; }
-    public int Quantity { get; set; }
+    public DateTime Date { get; }
+    public int LengthInMinutes { get; }
 
-    public double GetTotalCost()
+    public Activity(DateTime date, int lengthInMinutes)
     {
-        return Price * Quantity;
+        Date = date;
+        LengthInMinutes = lengthInMinutes;
+    }
+
+    public virtual double GetDistance()
+    {
+        return 0; // Default implementation for activities without a specific distance
+    }
+
+    public virtual double GetSpeed()
+    {
+        return 0; // Default implementation for activities without a specific speed
+    }
+
+    public virtual string GetSummary()
+    {
+        return $"{Date.ToShortDateString()} {GetType().Name} ({LengthInMinutes} min)";
     }
 }
 
-class Address
+class Running : Activity
 {
-    public string StreetAddress { get; set; }
-    public string City { get; set; }
-    public string StateProvince { get; set; }
-    public string Country { get; set; }
+    public double Distance { get; set; }
 
-    public bool IsInUSA()
+    public Running(DateTime date, int lengthInMinutes, double distance) 
+        : base(date, lengthInMinutes)
     {
-        return Country.ToLower() == "usa";
+        Distance = distance;
     }
 
-    public string GetFullAddress()
+    public override double GetDistance()
     {
-        return $"{StreetAddress}, {City}, {StateProvince}, {Country}";
+        return Distance;
+    }
+
+    public override double GetSpeed()
+    {
+        return Distance / (LengthInMinutes / 60.0);
+    }
+
+    public override string GetSummary()
+    {
+        return $"{base.GetSummary()} - Distance: {Distance} miles, Speed: {GetSpeed()} mph, Pace: {60.0 / GetSpeed()} min per mile";
     }
 }
 
-class Customer
+class Cycling : Activity
 {
-    public string Name { get; set; }
-    public Address Address { get; set; }
+    public double Speed { get; set; }
 
-    public bool IsInUSA()
+    public Cycling(DateTime date, int lengthInMinutes, double speed) 
+        : base(date, lengthInMinutes)
     {
-        return Address.IsInUSA();
+        Speed = speed;
+    }
+
+    public override double GetSpeed()
+    {
+        return Speed;
+    }
+
+    public override string GetSummary()
+    {
+        return $"{base.GetSummary()} - Speed: {Speed} mph, Pace: {60.0 / Speed} min per mile";
     }
 }
 
-class Order
+class Swimming : Activity
 {
-    public List<Product> Products { get; set; }
-    public Customer Customer { get; set; }
+    public int Laps { get; set; }
 
-    public double CalculateTotalPrice()
+    public Swimming(DateTime date, int lengthInMinutes, int laps) 
+        : base(date, lengthInMinutes)
     {
-        double totalPrice = 0;
-        foreach (var product in Products)
-        {
-            totalPrice += product.GetTotalCost();
-        }
-        if (Customer.IsInUSA())
-        {
-            totalPrice += 5; // Shipping cost for USA
-        }
-        else
-        {
-            totalPrice += 35; // Shipping cost for non-USA
-        }
-        return totalPrice;
+        Laps = laps;
     }
 
-    public string GetPackingLabel()
+    public override double GetDistance()
     {
-        string label = "Packing Label:\n";
-        foreach (var product in Products)
-        {
-            label += $"{product.Name} ({product.ProductId})\n";
-        }
-        return label;
+        return Laps * 50 / 1000.0; // Convert laps to kilometers
     }
 
-    public string GetShippingLabel()
+    public override string GetSummary()
     {
-        string label = "Shipping Label:\n";
-        label += $"{Customer.Name}\n";
-        label += $"{Customer.Address.GetFullAddress()}\n";
-        return label;
+        return $"{base.GetSummary()} - Distance: {GetDistance()} km";
     }
 }
 
@@ -89,42 +100,20 @@ class Program
 {
     static void Main(string[] args)
     {
-        Address address1 = new Address
-        {
-            StreetAddress = "123 Main St",
-            City = "New York",
-            StateProvince = "NY",
-            Country = "USA"
-        };
-        Customer customer1 = new Customer
-        {
-            Name = "Alice",
-            Address = address1
-        };
+        List<Activity> activities = new List<Activity>();
 
-        Product product1 = new Product
-        {
-            Name = "Laptop",
-            ProductId = "12345",
-            Price = 999.99,
-            Quantity = 1
-        };
-        Product product2 = new Product
-        {
-            Name = "Mouse",
-            ProductId = "67890",
-            Price = 19.99,
-            Quantity = 2
-        };
+        Running running = new Running(new DateTime(2024, 11, 3), 30, 3.0);
+        activities.Add(running);
 
-        Order order1 = new Order
-        {
-            Products = new List<Product> { product1, product2 },
-            Customer = customer1
-        };
+        Cycling cycling = new Cycling(new DateTime(2024, 11, 3), 30, 12.0);
+        activities.Add(cycling);
 
-        Console.WriteLine(order1.GetPackingLabel());
-        Console.WriteLine(order1.GetShippingLabel());
-        Console.WriteLine($"Total Price: ${order1.CalculateTotalPrice()}");
+        Swimming swimming = new Swimming(new DateTime(2024, 11, 3), 30, 20);
+        activities.Add(swimming);
+
+        foreach (var activity in activities)
+        {
+            Console.WriteLine(activity.GetSummary());
+        }
     }
 }
